@@ -1,0 +1,63 @@
+### 0. Generate token
+GET http://192.168.31.207:8111/authenticationTest.html?csrf
+Authorization: Basic admin admin
+
+###
+
+
+### 1. Create project
+POST http://192.168.31.207:8111/app/rest/projects
+Content-Type: application/json
+Accept: application/json
+X-TC-CSRF-Token: 05081c3e-876b-46a8-83e5-f59d95c7cf9c
+
+{
+    "parentProject": {
+        "locator": "WtfProject"
+    },
+    "name": "name_1",
+    "id": "id1",
+    "copyAllAssociatedSettings": true
+}
+
+### 2. Create build configuration
+POST http://192.168.31.207:8111/app/rest/buildTypes
+Content-Type: application/json
+Accept: application/json
+X-TC-CSRF-Token: 05081c3e-876b-46a8-83e5-f59d95c7cf9c
+
+{
+    "id": "id",
+    "name": "print hello world",
+    "project": {
+        "id": "id"
+    },
+    "steps": {
+        "step": [
+            {
+                "name": "print hello world",
+                "type": "simpleRunner",
+                "properties": {
+                    "property": [
+                        {
+                            "name": "script.content",
+                            "value": "echo 'Hello World!'"
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
+
+### 3. Start build
+POST http://192.168.31.207:8111/app/rest/buildQueue
+Content-Type: application/json
+Accept: application/json
+X-TC-CSRF-Token: 06640302-d4c0-4f45-961f-1182b14b0b48
+
+{
+  "buildType": {
+    "id": "id"
+  }
+}
