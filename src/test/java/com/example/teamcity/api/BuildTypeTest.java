@@ -1,59 +1,100 @@
 package com.example.teamcity.api;
-import org.testng.annotations.Test;
+import com.example.Teamcity.api.models.BuildType;
+import com.example.Teamcity.api.models.Project;
+import com.example.Teamcity.api.models.Role;
+import com.example.Teamcity.api.models.Roles;
+import com.example.Teamcity.api.requests.CheckedRequests;
+import com.example.Teamcity.api.requests.UncheckedRequests;
+import com.example.Teamcity.api.requests.unchecked.UncheckedBase;
+import com.example.Teamcity.api.spec.Specifications;
 import org.apache.http.HttpStatus;
-import io.restassured.RestAssured;
+import org.hamcrest.Matchers;
+import org.testng.annotations.Test;
 
-import static io.qameta.allure.Allure.step;
+import java.util.Arrays;
+import java.util.Collections;
+
+import static com.example.Teamcity.api.enums.Endpoint.*;
+import static com.example.Teamcity.api.generators.TestDataGenerator.generate;
 
 public class BuildTypeTest extends BaseApiTest{
     @Test(description = "User should be able to create build type", groups = {"Positive", "CRUD"})
     public void userCreatesBuildTypeTest() {
-        step("Create user");
-        step("Create project by user");
-        step("Create buildType for project by user");
-        step("Check buildType was created successfully with correct data");
+        var testData = generate();
+
+        superUserCheckRequests.getRequest(USERS).create(testData.getUser());
+        var userCheckRequests = new CheckedRequests(Specifications.authSpec(testData.getUser()));
+
+        userCheckRequests.<Project>getRequest(PROJECT).create(testData.getProject());
+
+        userCheckRequests.getRequest(BUILD_TYPES).create(testData.getBuildType());
+
+        var createdBuildType = userCheckRequests.<BuildType>getRequest(BUILD_TYPES).read(testData.getBuildType().getId());
+
+        softy.assertEquals(testData.getBuildType()
+                .getName(), createdBuildType.getName(), "Build type name is not correct");
     }
 
-    @Test(description = "User should not be able to create two build types with the same id", groups = {"Negative", "CRUD"})
+    @Test(description = "User should not be able to create two build types with the same id",
+            groups = {"Negative", "CRUD"})
     public void userCreatesTwoBuildTypesWithTheSameIdTest() {
-        step("Create user");
-        step("Create project by user");
-        step("Create buildType1 for project by user");
-        step("Create buildType2 with same id as buildType1 for project by user");
-        step("Check buildType2 was not created with bad request code");
+        var testData = generate();
+        var buildTypeWithSameId = generate(Arrays.asList(testData.getProject()), BuildType.class, testData.getBuildType()
+                .getId());
+
+        superUserCheckRequests.getRequest(USERS).create(testData.getUser());
+
+        var userCheckRequests = new CheckedRequests(Specifications.authSpec(testData.getUser()));
+
+        userCheckRequests.<Project>getRequest(PROJECT).create(testData.getProject());
+
+        userCheckRequests.getRequest(BUILD_TYPES).create(testData.getBuildType());
+        new UncheckedBase(Specifications.authSpec(testData.getUser()), BUILD_TYPES)
+                .create(buildTypeWithSameId)
+                .then().assertThat().statusCode(HttpStatus.SC_BAD_REQUEST)
+                .body(Matchers.containsString("The build configuration / template ID \"%s\" is already used by another configuration or template"
+                        .formatted(testData.getBuildType().getId())));
     }
 
-    @Test(description = "Project admin should be able to create build type for their project", groups = {"Positive", "Roles"})
+    @Test(description = "Project admin should be able to create build type for their project",
+            groups = {"Positive", "Roles"})
     public void projectAdminCreatesBuildTypeTest() {
-        step("Create user");
-        step("Create project");
-        step("Grant user PROJECT_ADMIN role in project");
+        var testData = generate();
+        var checkedUserRequests = new CheckedRequests(Specifications.authSpec(testData.getUser()));
+        testData.getUser().setRoles(generate(Roles.class, "PROJECT_ADMIN", "p:" + testData.getProject()
+                .getId()));
 
-        step("Create buildType for project by user (PROJECT_ADMIN)");
-        step("Check buildType was created successfully");
+        superUserCheckRequests.getRequest(PROJECT).create(testData.getProject());
+        superUserCheckRequests.getRequest(USERS).create(testData.getUser());
+        checkedUserRequests.getRequest(BUILD_TYPES).create(testData.getBuildType());
+
+        var createdBuildType = checkedUserRequests.<BuildType>getRequest(BUILD_TYPES)
+                .read(testData.getBuildType().getId());
+        softy.assertEquals(testData.getBuildType()
+                .getName(), createdBuildType.getName(), "Build type name is correct");
     }
 
     @Test(description = "Project admin should not be able to create build type for not their project", groups = {"Negative", "Roles"})
     public void projectAdminCreatesBuildTypeForAnotherUserProjectTest() {
-        step("Create user1");
-        step("Create project1");
-        step("Grant user1 PROJECT_ADMIN role in project1");
+        var testData = generate();
 
-        step("Create user2");
-        step("Create project2");
-        step("Grant user2 PROJECT_ADMIN role in project2");
+        var project1 = testData.getProject();
+        var project2 = generate(Project.class);
+        var buildTypeOfProject2 = generate(Arrays.asList(project2), BuildType.class);
+        var userForProject1 = testData.getUser();
 
-        step("Create buildType for project1 by user2");
-        step("Check buildType was not created with forbidden code");
+        superUserCheckRequests.<Project>getRequest(PROJECT).create(testData.getProject());
+        superUserCheckRequests.<Project>getRequest(PROJECT).create(project2);
+
+        Role projectAdminRole = new Role("PROJECT_ADMIN", "p:" + project1.getId());
+        Roles roles = new Roles(Collections.singletonList(projectAdminRole));
+        userForProject1.setRoles(roles);
+
+        superUserCheckRequests.<Project>getRequest(USERS).create(userForProject1);
+
+        new UncheckedRequests(Specifications.authSpec(userForProject1))
+                .getRequest(BUILD_TYPES).create(buildTypeOfProject2)
+                .then().assertThat().statusCode(HttpStatus.SC_FORBIDDEN)
+                .body(Matchers.containsString("You do not have enough permissions to edit project with id: %s".formatted(project2.getId())));
     }
-//    public void buildConfigurationTest(){
-//        var token = RestAssured.given()
-//                .auth()
-//                .basic("admin", "admin").when().get("http://192.168.31.207:8111/authenticationTest.html?csrf")
-//                .then().assertThat().statusCode(HttpStatus.SC_OK)
-//                .extract().asString();
-//        System.out.println(token);
-//
-//
-//    }
 }
