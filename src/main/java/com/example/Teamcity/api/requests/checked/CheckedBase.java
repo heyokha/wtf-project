@@ -5,6 +5,7 @@ import com.example.Teamcity.api.models.BaseModel;
 import com.example.Teamcity.api.requests.CrudInterface;
 import com.example.Teamcity.api.requests.Request;
 import com.example.Teamcity.api.requests.unchecked.UncheckedBase;
+import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import org.apache.http.HttpStatus;
 
@@ -18,7 +19,7 @@ public final class CheckedBase<T extends BaseModel> extends Request implements C
     }
 
     @Override
-    public T create(BaseModel model) {
+    public T create(BaseModel model) { // Получаем ответ от запроса
         return (T) uncheckedBase
                 .create(model)
                 .then().assertThat().statusCode(HttpStatus.SC_OK)
