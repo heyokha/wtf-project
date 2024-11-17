@@ -5,7 +5,6 @@ import com.example.Teamcity.api.models.BaseModel;
 import com.example.Teamcity.api.requests.CrudInterface;
 import com.example.Teamcity.api.requests.Request;
 import com.example.Teamcity.api.requests.unchecked.UncheckedBase;
-import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import org.apache.http.HttpStatus;
 
