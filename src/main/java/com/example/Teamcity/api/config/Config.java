@@ -11,7 +11,7 @@ public class Config {
 
     private Config() {
         properties = new Properties();
-        loadProperties("");
+        loadProperties(CONFIG_PROPERTIES);
     }
 
     private static Config getConfig() {
@@ -25,8 +25,9 @@ public class Config {
         try(InputStream stream = Config.class.getClassLoader().getResourceAsStream(fileName)) {
             if (stream == null) {
                 System.err.println("File not found " + fileName);
-                properties.load(stream);
+                return;
             }
+            properties.load(stream);
         } catch (IOException e) {
             System.err.println("Error during file reading " + fileName);
             throw new RuntimeException();

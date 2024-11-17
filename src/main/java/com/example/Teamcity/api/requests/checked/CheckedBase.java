@@ -18,7 +18,7 @@ public final class CheckedBase<T extends BaseModel> extends Request implements C
     }
 
     @Override
-    public T create(BaseModel model) {
+    public T create(BaseModel model) { // Получаем ответ от запроса
         return (T) uncheckedBase
                 .create(model)
                 .then().assertThat().statusCode(HttpStatus.SC_OK)
